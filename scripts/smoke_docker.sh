@@ -59,13 +59,13 @@ docker run --rm --network none \
 echo -e "\n[STEP 6/8] Testing report export to host volume..."
 TEMP_OUT_DIR=$(mktemp -d)
 
+chmod 755 "${TEMP_OUT_DIR}"
 # Set non-root write access on host mount directory for container UID 10001
 if command -v sudo &> /dev/null && [ "$(id -u)" -ne 0 ]; then
     sudo chown 10001:10001 "${TEMP_OUT_DIR}"
 elif [ "$(id -u)" -eq 0 ]; then
     chown 10001:10001 "${TEMP_OUT_DIR}"
 fi
-chmod 755 "${TEMP_OUT_DIR}"
 
 docker run --rm --network none \
   -v "${SAMPLE_CONF}:/data/config.conf:ro" \

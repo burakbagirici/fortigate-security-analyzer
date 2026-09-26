@@ -16,6 +16,7 @@ except ImportError:
 
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+APP_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
 
 
 def read_fixture(filename: str) -> str:
@@ -27,7 +28,7 @@ def read_fixture(filename: str) -> str:
 class TestAppIntegration(unittest.TestCase):
 
     def test_application_imports_and_empty_state_renders(self):
-        rendered = AppTest.from_file("app.py").run(timeout=10)
+        rendered = AppTest.from_file(APP_FILE).run(timeout=10)
 
         self.assertEqual(len(rendered.exception), 0)
         self.assertTrue(
@@ -146,7 +147,7 @@ class TestAppIntegration(unittest.TestCase):
         self.assertEqual(payload["health_result"]["checks"], [])
 
     def test_no_numeric_security_score_is_present(self):
-        with open("app.py", "r", encoding="utf-8") as file:
+        with open(APP_FILE, "r", encoding="utf-8") as file:
             source = file.read().casefold()
 
         self.assertNotIn("configuration security score", source)
@@ -155,7 +156,7 @@ class TestAppIntegration(unittest.TestCase):
         self.assertNotIn("score calculation", source)
 
     def test_runtime_health_analysis_mode_and_empty_state_renders(self):
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         self.assertEqual(len(at.exception), 0)
         self.assertEqual(at.radio[0].value, "Configuration Analysis")
 
@@ -180,7 +181,7 @@ class TestAppIntegration(unittest.TestCase):
         self.assertEqual(payload["runtime_result"]["summary"]["total"], 0)
 
     def test_healthy_runtime_fixture_renders(self):
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         at.radio[0].set_value("Runtime Health Analysis").run(timeout=10)
         healthy_payload = app._run_runtime_pipeline(read_fixture("runtime_healthy.txt"))
         at.session_state["runtime_payload"] = healthy_payload
@@ -202,7 +203,7 @@ class TestAppIntegration(unittest.TestCase):
         self.assertEqual(total_metric.value, "0")
 
     def test_problematic_runtime_fixture_renders(self):
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         at.radio[0].set_value("Runtime Health Analysis").run(timeout=10)
         problem_payload = app._run_runtime_pipeline(read_fixture("runtime_problematic.txt"))
         at.session_state["runtime_payload"] = problem_payload
@@ -218,7 +219,7 @@ class TestAppIntegration(unittest.TestCase):
         self.assertNotEqual(total_metric.value, "0")
 
     def test_runtime_inventory_and_findings_render(self):
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         at.radio[0].set_value("Runtime Health Analysis").run(timeout=10)
         healthy_payload = app._run_runtime_pipeline(read_fixture("runtime_healthy.txt"))
         at.session_state["runtime_payload"] = healthy_payload
@@ -252,7 +253,7 @@ Hostname: FGT-1
 Some output
 """
         payload = app._run_runtime_pipeline(raw_text)
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         at.radio[0].set_value("Runtime Health Analysis").run(timeout=10)
         at.session_state["runtime_payload"] = payload
         at.session_state["runtime_filename"] = "test.txt"
@@ -275,7 +276,7 @@ Serial-Number: FGT60FTK00000001
         self.assertEqual(payload["runtime_result"]["summary"]["total"], 0)
 
     def test_static_and_runtime_session_states_remain_separate(self):
-        at = AppTest.from_file("app.py").run(timeout=10)
+        at = AppTest.from_file(APP_FILE).run(timeout=10)
         static_payload = app._run_analysis_pipeline(read_fixture("basic.conf"))
         runtime_payload = app._run_runtime_pipeline(read_fixture("runtime_healthy.txt"))
 
