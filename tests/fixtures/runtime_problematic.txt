@@ -1,0 +1,57 @@
+=== COMMAND: get system status ===
+Version: FortiGate-100F v7.2.5,build1517,230606 (GA.M)
+Serial-Number: FG100FTK21000002
+Hostname: FGT-BRANCH-01
+Operation Mode: NAT
+Current HA mode: a-p
+System time: Tue Sep 22 23:59:59 2026
+
+=== COMMAND: get sys fortiguard-service status ===
+FortiGuard Communication: Failed
+FortiGuard server: unreachable
+Status: Failed to connect to FortiGuard servers
+
+=== COMMAND: diagnose autoupdate status ===
+Update Daemon: Error
+Result: Connection error to update server
+
+=== COMMAND: get sys ha status ===
+HA Health Status: Problem detected
+Model: FortiGate-100F
+Mode: a-p
+Group: 10
+Master: FGT-BRANCH-01
+FGT-BRANCH-01: OK, primary, priority=200
+FGT-BRANCH-02: dead, secondary, priority=100
+Configuration Status:
+FGT-BRANCH-01: in-sync
+FGT-BRANCH-02: out-of-sync
+
+=== COMMAND: diagnose sys ntp status ===
+synchronized: no, epoch: 0, stratum: 16
+server: 203.0.113.10, status: unreachable
+
+=== COMMAND: exec sensor list ===
+1  PS1 Status            alarm     failed
+2  PS2 Status            ok        ok
+3  FAN1 Speed            alarm     fault
+4  DTS Temp              ok        42.0 C
+
+=== COMMAND: diag hardware deviceinfo psu ===
+PSU 1: Status: Failed, Type: AC
+PSU 2: Status: OK, Type: AC
+
+=== COMMAND: diag debug crashlog read ===
+1: 2026-05-10 14:22:01 <00001> sslvpnd crashed with signal 11
+2: 2026-06-11 08:15:33 <00002> miglogd crashed with signal 6
+
+=== COMMAND: diag debug config-error-log read ===
+>>> "set admin-ssh-v1 enable" : unknown attribute
+>>> "set ssl-min-proto ver1" : command parse error
+
+=== COMMAND: get router info routing-table all ===
+Codes: K - kernel, C - connected, S - static, R - RIP, B - BGP
+       C - connected
+
+C       10.0.1.0/24 is directly connected, port2
+C       192.168.100.0/24 is directly connected, port3

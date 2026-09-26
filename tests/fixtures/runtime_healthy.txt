@@ -1,0 +1,58 @@
+=== COMMAND: get system status ===
+Version: FortiGate-100F v7.2.5,build1517,230606 (GA.M)
+Serial-Number: FG100FTK21000001
+Hostname: FGT-PRIMARY-01
+Operation Mode: NAT
+Current HA mode: a-p
+System time: Tue Sep 22 23:59:59 2026
+
+=== COMMAND: get sys fortiguard-service status ===
+FortiGuard Communication: Enabled
+FortiGuard server: 208.91.112.53:443
+Status: Connected
+Failed attempts: 0
+
+=== COMMAND: diagnose autoupdate status ===
+Update Daemon: Idle
+Result: Success
+Failed attempts: 0
+
+=== COMMAND: get sys ha status ===
+HA Health Status: OK
+Model: FortiGate-100F
+Mode: a-p
+Group: 10
+Master: FGT-PRIMARY-01
+FGT-PRIMARY-01: OK, primary, priority=200
+FGT-SECONDARY-02: OK, secondary, priority=100
+Configuration Status:
+FGT-PRIMARY-01: in-sync
+FGT-SECONDARY-02: in-sync
+
+=== COMMAND: diagnose sys ntp status ===
+synchronized: yes, epoch: 1695427200, stratum: 2
+offset: 0.001 ms, delay: 12.5 ms, jitter: 0.2 ms
+server: 203.0.113.10, status: reachable
+
+=== COMMAND: exec sensor list ===
+1  PS1 Status            ok        ok
+2  PS2 Status            ok        ok
+3  FAN1 Speed            ok        4500 RPM
+4  DTS Temp              ok        42.0 C
+
+=== COMMAND: diag hardware deviceinfo psu ===
+PSU 1: Status: OK, Type: AC
+PSU 2: Status: OK, Type: AC
+
+=== COMMAND: diag debug crashlog read ===
+
+=== COMMAND: diag debug config-error-log read ===
+
+=== COMMAND: get router info routing-table all ===
+Codes: K - kernel, C - connected, S - static, R - RIP, B - BGP
+       O - OSPF, IA - OSPF inter area
+       * - candidate default
+
+S*      0.0.0.0/0 [10/0] via 203.0.113.1, port1
+C       10.0.1.0/24 is directly connected, port2
+C       203.0.113.0/24 is directly connected, port1

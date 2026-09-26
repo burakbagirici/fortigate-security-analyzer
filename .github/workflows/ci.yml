@@ -1,0 +1,261 @@
+name: CI
+
+"on":
+  push:
+    branches: ["master", "main"]
+  pull_request:
+    branches: ["master", "main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-core:
+    name: Core Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core package (stdlib-only, no extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run core unit test suite
+        run: |
+          python -m unittest discover -s tests -v
+
+  test-ui:
+    name: Streamlit UI Smoke (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package with UI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[ui]"
+
+      - name: Verify Streamlit import and run app tests
+        run: |
+          python -c "import streamlit; import app; print('Streamlit & app imported successfully')"
+          python -m unittest tests.test_app -v
+
+  build-package:
+    name: Build Distribution Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build wheel and source distribution
+        run: |
+          python -m build
+
+      - name: Check package metadata with twine
+        run: |
+          python -m twine check --strict dist/*
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+          retention-days: 7
+
+  verify-wheel-clean-install:
+    name: Clean Wheel Install & Out-of-Tree Verification
+    runs-on: ubuntu-latest
+    needs: build-package
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+      - name: Verify downloaded distribution artifacts
+        run: |
+          ls -la dist/
+          test -f dist/fortigate_analyzer-*.whl
+          test -f dist/fortigate_analyzer-*.tar.gz
+
+      - name: Install wheel into isolated virtual environment outside repo
+        run: |
+          python -m venv /tmp/clean_venv
+          /tmp/clean_venv/bin/pip install --upgrade pip
+          /tmp/clean_venv/bin/pip install --no-deps dist/fortigate_analyzer-*.whl
+
+      - name: Verify CLI version and help outside repository
+        run: |
+          cd /tmp
+          /tmp/clean_venv/bin/fortigate-analyzer --version
+          /tmp/clean_venv/bin/fortigate-analyzer --help
+          /tmp/clean_venv/bin/python -m fortigate_analyzer --version
+
+      - name: Verify analysis and JSON/HTML export on sample config
+        run: |
+          cd /tmp
+          cat << 'EOF' > /tmp/sample.conf
+          config firewall policy
+              edit 1
+                  set srcintf "port1"
+                  set dstintf "port2"
+                  set srcaddr "all"
+                  set dstaddr "all"
+                  set action accept
+                  set schedule "always"
+                  set service "ALL"
+              next
+          end
+          EOF
+
+          /tmp/clean_venv/bin/fortigate-analyzer analyze /tmp/sample.conf
+          /tmp/clean_venv/bin/fortigate-analyzer analyze -v /tmp/sample.conf
+          /tmp/clean_venv/bin/fortigate-analyzer export /tmp/sample.conf --format json -o /tmp/report.json
+          /tmp/clean_venv/bin/fortigate-analyzer export /tmp/sample.conf --format html -o /tmp/report.html
+          python3 -c "import json; data = json.load(open('/tmp/report.json')); assert data['schema_version'] == '1.0'"
+          test -s /tmp/report.html
+
+      - name: Verify stdout JSON stream purity (no terminal contamination)
+        run: |
+          cd /tmp
+          /tmp/clean_venv/bin/fortigate-analyzer export /tmp/sample.conf --format json > /tmp/stdout.json
+          python3 -c "import json; data = json.load(open('/tmp/stdout.json', encoding='utf-8')); assert 'schema_version' in data; print('JSON stdout stream verified clean')"
+
+  docker-runtime-smoke:
+    name: Docker Runtime Smoke & Offline Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t fortigate-analyzer:ci .
+
+      - name: Verify container CLI --version
+        run: |
+          docker run --rm fortigate-analyzer:ci --version
+
+      - name: Verify container CLI --help (default action)
+        run: |
+          docker run --rm fortigate-analyzer:ci --help
+
+      - name: Verify non-root user identity (UID 10001)
+        run: |
+          CONTAINER_UID=$(docker run --rm --entrypoint id fortigate-analyzer:ci -u)
+          echo "Container UID: ${CONTAINER_UID}"
+          if [ "${CONTAINER_UID}" != "10001" ]; then
+            echo "Expected UID 10001, got: ${CONTAINER_UID}" >&2
+            exit 1
+          fi
+
+      - name: Run static analysis with read-only volume mount
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/tests/fixtures/golden:/data:ro" \
+            fortigate-analyzer:ci analyze /data/combined_realistic.conf
+
+      - name: Run offline static analysis (--network none)
+        run: |
+          docker run --rm --network none \
+            -v "${{ github.workspace }}/tests/fixtures/golden:/data:ro" \
+            fortigate-analyzer:ci analyze /data/combined_realistic.conf
+
+      - name: Test JSON and HTML export to mounted output directory
+        run: |
+          mkdir -p /tmp/docker_out
+          sudo chown 10001:10001 /tmp/docker_out
+          chmod 755 /tmp/docker_out
+
+          docker run --rm --network none \
+            -v "${{ github.workspace }}/tests/fixtures/golden:/data:ro" \
+            -v /tmp/docker_out:/out \
+            fortigate-analyzer:ci export /data/combined_realistic.conf --format json -o /out/report.json
+
+          docker run --rm --network none \
+            -v "${{ github.workspace }}/tests/fixtures/golden:/data:ro" \
+            -v /tmp/docker_out:/out \
+            fortigate-analyzer:ci export /data/combined_realistic.conf --format html -o /out/report.html
+
+          python3 -c "import json; data = json.load(open('/tmp/docker_out/report.json')); assert data['schema_version'] == '1.0'"
+          test -s /tmp/docker_out/report.html
+
+      - name: Inspect file ownership and host read access
+        run: |
+          ls -la /tmp/docker_out
+          # Confirm container non-root UID 10001 owns the generated report files
+          stat -c "%u %n" /tmp/docker_out/report.json | grep -q "10001"
+          test -r /tmp/docker_out/report.json
+          test -r /tmp/docker_out/report.html
+          echo "Output files verified readable by host runner and owned by UID 10001"
+
+      - name: Start Streamlit UI container and verify health endpoint
+        run: |
+          docker run -d --name fortigate-analyzer-ui-ci -p 8501:8501 fortigate-analyzer:ci ui
+
+          echo "Polling Streamlit health endpoint (http://127.0.0.1:8501/_stcore/health)..."
+          HEALTHY=0
+          for i in $(seq 1 30); do
+            if curl -s -f "http://127.0.0.1:8501/_stcore/health" > /dev/null 2>&1; then
+              echo "Streamlit health check passed (attempt ${i})!"
+              HEALTHY=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "${HEALTHY}" -ne 1 ]; then
+            echo "ERROR: Streamlit UI health check timed out after 30 seconds" >&2
+            docker logs fortigate-analyzer-ui-ci >&2
+            exit 1
+          fi
+
+      - name: Cleanup UI container
+        if: always()
+        run: |
+          docker stop fortigate-analyzer-ui-ci || true
+          docker rm fortigate-analyzer-ui-ci || true

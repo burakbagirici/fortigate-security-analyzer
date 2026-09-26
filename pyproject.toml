@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fortigate-analyzer"
+dynamic = ["version"]
+description = "FortiGate Security Analyzer: Static configuration review and health auditing"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+ui = [
+    "streamlit>=1.20.0",
+]
+
+[project.scripts]
+fortigate-analyzer = "fortigate_analyzer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fortigate_analyzer*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "fortigate_analyzer.__version__"}

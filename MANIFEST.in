@@ -1,0 +1,27 @@
+include README.md
+include pyproject.toml
+include requirements.txt
+include Dockerfile
+include docker-entrypoint.sh
+
+recursive-include fortigate_analyzer *.py
+recursive-include tests *.py
+recursive-include tests/fixtures/golden *.conf
+recursive-include docs *.md
+
+# Explicitly prune sensitive, development, and temporary trees
+prune scratch
+prune corpus
+prune benchmarks
+prune tools
+prune .gemini
+prune dist
+prune build
+
+# Global exclusions
+global-exclude *.conf.bak
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.swp
+global-exclude *.swo
+global-exclude .DS_Store

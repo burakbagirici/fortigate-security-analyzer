@@ -1,0 +1,36 @@
+# Bytecode and runtime caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts & package metadata
+build/
+dist/
+*.egg-info/
+
+# Development, test scratch & corpora
+scratch/
+corpus/
+benchmarks/
+tools/
+.gemini/
+
+# Sensitive backups, secrets & local environments
+*.conf.bak
+*.backup
+*.tmp
+.env
+.env.*
+venv/
+.venv/
+env/
+ENV/
+
+# Editor / IDE metadata
+.vscode/
+.idea/
+*.swp
+*.swo

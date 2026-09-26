@@ -1,0 +1,46 @@
+# Version control
+.git
+.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts and distributions
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Development, benchmarks, scratch, and tests
+tests/
+corpus/
+benchmarks/
+scratch/
+tools/
+.gemini/
+
+# Sensitive or user config files (prevent baking configs into image)
+*.conf
+*.cfg
+*.backup
+*.log
+*.txt.bak
+.env
+.env.*
+
+# Editor and IDE metadata
+.vscode/
+.idea/
+*.swp
+*.swo
